@@ -12,11 +12,6 @@
   th,td{border:1px solid #bbb; padding:8px; text-align:left;}
   .row-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; justify-content:center;}
   .small{color:#666; font-size:.9rem; text-align:center; margin-top:6px;}
-  /* 画像化時だけ適用して文字・枠を太くする */
-  #cap.for-shot{font-size:18px;}
-  #cap.for-shot table{font-size:18px;}
-  #cap.for-shot th,#cap.for-shot td{border:2px solid #666; padding:10px; font-weight:600;}
-  #cap.for-shot h1{font-size:2.4rem;}
 </style>
 </head>
 <body>
@@ -59,6 +54,9 @@
   }
   function buildPreview(d){
     const total=(d.adult||0)+(d.child||0)+(d.infant||0);
+    const transportRow = d.transport.type === '独自' && d.transport.detail === '乗用車'
+      ? `${esc(d.transport.type)}（${esc(d.transport.detail)}）／ 台数 ${d.carCount||0}台`
+      : `${esc(d.transport.type)}（${esc(d.transport.detail)}）`;
     return `
       <table>
         <tr><th>教会名（団体名）</th><td>${esc(d.kyokai)}</td></tr>
@@ -66,7 +64,7 @@
         <tr><th>人数</th><td>大人${d.adult||0} 子供${d.child||0} 乳児${d.infant||0}（計${total}）</td></tr>
         <tr><th>詰所到着</th><td>${esc(fmtMDw(d.arrivalDate))} ${esc(d.arrivalTime)}</td></tr>
         <tr><th>出発</th><td>${esc(fmtMDw(d.departDate))} ${esc(d.departTime)}</td></tr>
-        <tr><th>交通</th><td>${esc(d.transport.type)}（${esc(d.transport.detail)}）</td></tr>
+        <tr><th>交通</th><td>${transportRow}</td></tr>
         <tr><th>直属食券 申込</th><td>${esc(fmtMD(d.ticketDate)||'')} ／ 食数 ${d.ticketCount||0}</td></tr>
         <tr><th>備考</th><td>${esc(d.note||'')}</td></tr>
       </table>
@@ -78,12 +76,9 @@
   }
   preview.innerHTML = buildPreview(data);
 
-  // 画像化：キャプチャ前だけ「for-shot」クラスで太字・大きめに、解像度scale=3
+  // 画像化（以前の設定：scale=2、スタイル変更なし）
   async function captureBlob(){
-    cap.classList.add('for-shot');
-    await new Promise(r=>setTimeout(r,0));
-    const canvas = await html2canvas(cap, { scale:3, backgroundColor:'#fff' });
-    cap.classList.remove('for-shot');
+    const canvas = await html2canvas(cap, { scale:2, backgroundColor:'#fff' });
     return await new Promise(res => canvas.toBlob(b => res(b), 'image/png'));
   }
 
@@ -105,7 +100,6 @@
     }catch(e){ alert('画像の作成に失敗しました: ' + e.message); }
   });
 
-  // 編集に戻る（入力値はsessionStorageに残る）
   document.getElementById('backEdit').addEventListener('click', ()=>{
     location.href = './index.html';
   });
