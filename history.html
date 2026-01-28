@@ -6,7 +6,7 @@
 <title>帰参届（履歴）</title>
 <style>
   body{font-family:system-ui,sans-serif; padding:16px; max-width:960px; margin:0 auto;}
-  h1{font-size:1.3rem; margin:0 0 12px;}
+  h1{font-size:1.6rem; margin:0 0 12px;}
   table{width:100%; border-collapse:collapse; margin-top:8px;}
   th,td{border:1px solid #ddd; padding:6px; text-align:left; vertical-align:top;}
   .row-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
@@ -28,7 +28,7 @@
   <table id="tbl">
     <thead>
       <tr>
-        <th>保存時刻</th><th>教会名</th><th>帰参者名</th><th>到着</th><th>発</th><th>詳細</th><th class="right">操作</th>
+        <th>保存時刻</th><th>教会名（団体名）</th><th>帰参者名</th><th>詰所到着</th><th>出発</th><th>詳細</th><th class="right">操作</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -38,24 +38,26 @@
   const SESSION_KEY = 'kisanFormV2';
   const TO_EMAIL = 'norinet.216@gmail.com';
 
+  const fmtMD = (ymd)=> { if(!ymd) return ''; const [y,m,d]=ymd.split('-'); return `${Number(m)}/${Number(d)}`; };
   function load(){ try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]');}catch{return[];} }
   function save(arr){ localStorage.setItem(HISTORY_KEY, JSON.stringify(arr)); }
   function esc(s=''){return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
   function buildText(d){
+    const total=(d.adult||0)+(d.child||0)+(d.infant||0);
     const lines = [
       '【帰参届】',
-      `教会名: ${d.kyokai}`,
+      `教会名（団体名）: ${d.kyokai}`,
       `帰参者名: ${d.kisan}`,
-      `人数: 大人${d.adult} 子供${d.child} 乳児${d.infant}（計${(d.adult||0)+(d.child||0)+(d.infant||0)}）`,
-      `到着: ${d.arrivalDate} ${d.arrivalTime}`,
-      `発: ${d.departDate} ${d.departTime}`,
+      `人数: 大人${d.adult||0} 子供${d.child||0} 乳児${d.infant||0}（計${total}）`,
+      `詰所到着: ${fmtMD(d.arrivalDate)} ${d.arrivalTime}`,
+      `出発: ${fmtMD(d.departDate)} ${d.departTime}`,
       `交通: ${d.transport?.type}（${d.transport?.detail}）`,
-      `直属食券: ${d.ticketDate||''} ／ 食数 ${d.ticketCount||0}`,
+      `直属食券: ${fmtMD(d.ticketDate)||''}／食数 ${d.ticketCount||0}`,
       `備考: ${d.note||''}`,
       '日別内訳:'
     ];
-    (d.days||[]).forEach(r=>lines.push(`- ${r.date}: 朝${r.breakfast} 昼${r.lunch} 夜${r.dinner} 宿泊${r.stay}`));
+    (d.days||[]).forEach(r=>lines.push(`- ${fmtMD(r.date)}: 朝${r.breakfast||0} 昼${r.lunch||0} 夜${r.dinner||0} 宿泊${r.stay||0}`));
     lines.push('※直属食券が発行される日、申込〆切日をよくご確認ください。');
     lines.push('◎変更や取消は到着2日前迄に必ずご連絡下さい。');
     return lines.join('\n');
@@ -67,17 +69,17 @@
     tbody.innerHTML = h.map((e,i)=>{
       const when = new Date(e.savedAt||Date.now()).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'});
       const detail = [
-        `人数: 大${e.adult} 子${e.child} 乳${e.infant}`,
+        `人数: 大${e.adult||0} 子${e.child||0} 乳${e.infant||0}`,
         `交通: ${e.transport?.type}（${e.transport?.detail}）`,
-        `直属食券: ${e.ticketDate||''}／${e.ticketCount||0}`,
-        ...((e.days||[]).map(r=>`- ${r.date}: 朝${r.breakfast} 昼${r.lunch} 夜${r.dinner} 宿${r.stay}`))
+        `直属食券: ${fmtMD(e.ticketDate)||''}／${e.ticketCount||0}`,
+        ...((e.days||[]).map(r=>`- ${fmtMD(r.date)}: 朝${r.breakfast||0} 昼${r.lunch||0} 夜${r.dinner||0} 宿${r.stay||0}`))
       ].join('<br>');
       return `<tr>
         <td>${esc(when)}</td>
         <td>${esc(e.kyokai||'')}</td>
         <td>${esc(e.kisan||'')}</td>
-        <td>${esc((e.arrivalDate||'')+' '+(e.arrivalTime||''))}</td>
-        <td>${esc((e.departDate||'')+' '+(e.departTime||''))}</td>
+        <td>${esc(fmtMD(e.arrivalDate)||''+' '+(e.arrivalTime||''))}</td>
+        <td>${esc(fmtMD(e.departDate)||''+' '+(e.departTime||''))}</td>
         <td>${detail}</td>
         <td class="right">
           <button data-act="view" data-idx="${i}">表示</button>
@@ -96,7 +98,7 @@
     const h = load(); const item = h[idx]; if (!item) return;
     if (act==='view'){ alert(buildText(item)); }
     if (act==='mail'){
-      const subject = `【帰参届】${item.kyokai}／${item.kisan}（${item.arrivalDate} 到着）`;
+      const subject = `【帰参届】${item.kyokai}／${item.kisan}（${fmtMD(item.arrivalDate)} 到着）`;
       const body = buildText(item);
       location.href = `mailto:${encodeURIComponent(TO_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
@@ -113,17 +115,17 @@
 
   document.getElementById('exportCsv').addEventListener('click', ()=>{
     const h = load();
-    const headers = ['保存時刻','教会名','帰参者名','大人','子供','乳児','到着日','到着時間','発日','発時間','交通種別','交通詳細','直属食券','備考','日別内訳'];
+    const headers = ['保存時刻','教会名（団体名）','帰参者名','大人','子供','乳児','到着(M/D)','到着時間','出発(M/D)','出発時間','交通種別','交通詳細','直属食券(M/D)','食数','備考','日別内訳'];
     const rows = h.map(e=>[
       new Date(e.savedAt||Date.now()).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}),
       e.kyokai||'', e.kisan||'',
       e.adult||0, e.child||0, e.infant||0,
-      e.arrivalDate||'', e.arrivalTime||'',
-      e.departDate||'', e.departTime||'',
+      fmtMD(e.arrivalDate)||'', e.arrivalTime||'',
+      fmtMD(e.departDate)||'', e.departTime||'',
       e.transport?.type||'', e.transport?.detail||'',
-      `${e.ticketDate||''}/${e.ticketCount||0}`,
+      fmtMD(e.ticketDate)||'', e.ticketCount||0,
       e.note||'',
-      (e.days||[]).map(r=>`${r.date}:朝${r.breakfast}昼${r.lunch}夜${r.dinner}宿${r.stay}`).join(' / ')
+      (e.days||[]).map(r=>`${fmtMD(r.date)}:朝${r.breakfast||0}昼${r.lunch||0}夜${r.dinner||0}宿${r.stay||0}`).join(' / ')
     ]);
     const csv = [headers, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
     const blob = new Blob(["\uFEFF"+csv], {type:'text/csv'});
