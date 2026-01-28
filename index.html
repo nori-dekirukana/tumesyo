@@ -82,7 +82,13 @@
       <option value="乗用車">乗用車</option>
       <option value="他">他</option>
     </select>
-    <input type="text" name="privateOther" placeholder="他の場合は入力">
+    <input type="text" name="privateOther" placeholder="他の場合は入力" style="margin-top:6px;">
+    <div id="carCountWrap" class="grid2" style="display:none; margin-top:8px;">
+      <div>
+        <label class="muted">台数（乗用車）</label>
+        <input type="number" name="carCount" min="1" inputmode="numeric" placeholder="">
+      </div>
+    </div>
   </div>
 </div>
 
@@ -126,14 +132,22 @@
   const SESSION_KEY = 'kisanFormV2';
   const form = document.getElementById('form');
   const tbody = document.querySelector('#daysTable tbody');
+  const carCountWrap = document.getElementById('carCountWrap');
 
+  function updatePrivateExtras(){
+    const type = form.elements['transportType'].value;
+    const detail = form.elements['privateTransport'].value;
+    const showCar = (type==='独自' && detail==='乗用車');
+    carCountWrap.style.display = showCar ? 'grid' : 'none';
+  }
   function updateTransportUI(){
     const t = form.elements['transportType'].value;
     document.getElementById('publicWrap').style.display = (t==='公共交通')?'block':'none';
     document.getElementById('privateWrap').style.display = (t==='独自')?'block':'none';
+    updatePrivateExtras();
   }
   form.addEventListener('change', e=>{
-    if (e.target.name === 'transportType') updateTransportUI();
+    if (e.target.name === 'transportType' || e.target.name === 'privateTransport') updateTransportUI();
   });
 
   function z(n){return String(n).padStart(2,'0');}
@@ -194,7 +208,6 @@
   }
   function n(v){ return Number(v||0); }
 
-  // 前回入力の自動復元
   function restoreFromSession(){
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return;
@@ -216,6 +229,8 @@
       } else {
         form.elements['privateTransport'].value = ['観光バス','マイクロバス','乗用車','他'].includes(d.transport?.detail) ? d.transport.detail : '他';
         form.elements['privateOther'].value = (['観光バス','マイクロバス','乗用車'].includes(d.transport?.detail)) ? '' : (d.transport?.detail || '');
+        form.elements['carCount'].value = (d.carCount ?? '');
+        updatePrivateExtras();
       }
       renderDaysFromData(d.days||[]);
       form.elements['ticketDate'].value = d.ticketDate || '';
@@ -231,6 +246,13 @@
 
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
+
+    // 乗用車のとき台数チェック（空はNG）
+    if (form.elements['transportType'].value==='独自' && form.elements['privateTransport'].value==='乗用車') {
+      const c = form.elements['carCount'].value.trim();
+      if (!c) { alert('乗用車の台数を入力してください'); return; }
+    }
+
     const data = {
       kyokai: form.elements['kyokai'].value.trim(),
       kisan: form.elements['kisan'].value.trim(),
@@ -242,6 +264,7 @@
       departDate: form.elements['departDate'].value,
       departTime: form.elements['departTime'].value,
       transport: getTransport(),
+      carCount: n(form.elements['carCount'].value),
       days: collectDays(),
       ticketDate: form.elements['ticketDate'].value || '',
       ticketCount: n(form.elements['ticketCount'].value),
