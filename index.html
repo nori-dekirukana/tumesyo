@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>帰参届（入力）</title>
+<title>帰参届</title>
 <style>
   body{font-family:system-ui, sans-serif; padding:16px; max-width:860px; margin:0 auto;}
-  h1{font-size:1.3rem; margin:0 0 12px;}
+  h1{font-size:1.8rem; margin:0 0 12px;}
   label{display:block; margin:12px 0 6px; font-weight:700;}
   input, select, button, textarea{width:100%; padding:10px; font-size:16px; box-sizing:border-box;}
   textarea{min-height:96px;}
@@ -31,9 +31,9 @@
     <a href="./index.html">入力</a>
     <a href="./history.html">履歴</a>
   </nav>
-  <h1>帰参届（入力）</h1>
+  <h1>帰参届</h1>
   <form id="form">
-    <label>教会名</label>
+    <label>教会名（団体名）</label>
     <input type="text" name="kyokai" required>
 コードをコピーする<label>帰参者名（代表）</label>
 <input type="text" name="kisan" required>
@@ -41,29 +41,29 @@
 <div class="box">
   <strong>人数</strong>
   <div class="grid3">
-    <div><label class="muted">大人</label><input type="number" name="adult" min="0" value="1" required></div>
-    <div><label class="muted">子供</label><input type="number" name="child" min="0" value="0"></div>
-    <div><label class="muted">乳児</label><input type="number" name="infant" min="0" value="0"></div>
+    <div><label class="muted">大人</label><input type="number" name="adult" min="0" placeholder=""></div>
+    <div><label class="muted">子供</label><input type="number" name="child" min="0" placeholder=""></div>
+    <div><label class="muted">乳児</label><input type="number" name="infant" min="0" placeholder=""></div>
   </div>
 </div>
 
 <div class="box">
-  <strong>詰所 到着・発</strong>
+  <strong>詰所到着・出発</strong>
   <div class="grid2">
     <div>
-      <label class="muted">到着日</label>
+      <label class="muted">詰所到着 日付</label>
       <input type="date" name="arrivalDate" required>
     </div>
     <div>
-      <label class="muted">到着 予定時間</label>
+      <label class="muted">詰所到着 予定時間</label>
       <input type="time" name="arrivalTime" required>
     </div>
     <div>
-      <label class="muted">発日</label>
+      <label class="muted">出発 日付</label>
       <input type="date" name="departDate" required>
     </div>
     <div>
-      <label class="muted">発 予定時間</label>
+      <label class="muted">出発 予定時間</label>
       <input type="time" name="departTime" required>
     </div>
   </div>
@@ -96,7 +96,7 @@
 
 <div class="box">
   <strong>日付ごとの 食事・宿泊</strong>
-  <div class="small">各日について、必要数を入力してください（0も可）。</div>
+  <div class="small">各日について、必要数を入力してください（空欄可）。</div>
   <table id="daysTable">
     <thead>
       <tr>
@@ -107,7 +107,7 @@
   </table>
   <div class="row-actions">
     <button type="button" id="addRowBtn">行を追加</button>
-    <button type="button" id="autoFillBtn">到着〜発の期間を自動追加</button>
+    <button type="button" id="autoFillBtn">到着〜出発の期間を自動追加</button>
   </div>
 </div>
 
@@ -120,7 +120,7 @@
     </div>
     <div>
       <label class="muted">食数</label>
-      <input type="number" name="ticketCount" min="0" value="0">
+      <input type="number" name="ticketCount" min="0" placeholder="">
     </div>
   </div>
   <div class="note">※直属食券が発行される日、申込〆切日をよくご確認ください。</div>
@@ -141,7 +141,6 @@
   </form>
 <script>
   const SESSION_KEY = 'kisanFormV2';
-
   const form = document.getElementById('form');
   const daysTbody = document.querySelector('#daysTable tbody');
   const addRowBtn = document.getElementById('addRowBtn');
@@ -161,10 +160,10 @@
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="date" value="${dateStr}"></td>
-      <td><input type="number" min="0" value="0" style="width:90px"></td>
-      <td><input type="number" min="0" value="0" style="width:90px"></td>
-      <td><input type="number" min="0" value="0" style="width:90px"></td>
-      <td><input type="number" min="0" value="0" style="width:90px"></td>
+      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
+      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
+      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
+      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
       <td class="right"><button type="button" data-act="del">削除</button></td>
     `;
     daysTbody.appendChild(tr);
@@ -180,7 +179,7 @@
   addRowBtn.addEventListener('click', ()=>addRow(''));
   autoFillBtn.addEventListener('click', ()=>{
     const a=form.elements['arrivalDate'].value, b=form.elements['departDate'].value;
-    if(!a||!b){ alert('到着日と発日を先に入力してください'); return; }
+    if(!a||!b){ alert('詰所到着日と出発日を先に入力してください'); return; }
     daysTbody.innerHTML=''; for(const d of dateRange(a,b)) addRow(d);
   });
   daysTbody.addEventListener('click', (e)=>{
@@ -194,10 +193,10 @@
       const [date, bf, lu, di, stay] = tr.querySelectorAll('input');
       if (date.value) rows.push({
         date: date.value,
-        breakfast: Number(bf.value||0),
-        lunch: Number(lu.value||0),
-        dinner: Number(di.value||0),
-        stay: Number(stay.value||0),
+        breakfast: Number((bf.value||0)),
+        lunch: Number((lu.value||0)),
+        dinner: Number((di.value||0)),
+        stay: Number((stay.value||0)),
       });
     });
     return rows;
@@ -209,6 +208,7 @@
     const other = (d==='他') ? (form.elements['privateOther'].value||'他') : d;
     return { type, detail: other };
   }
+  function n(v){ return Number(v||0); }
 
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
@@ -218,9 +218,9 @@
     const data = {
       kyokai: form.elements['kyokai'].value.trim(),
       kisan: form.elements['kisan'].value.trim(),
-      adult: Number(form.elements['adult'].value||0),
-      child: Number(form.elements['child'].value||0),
-      infant: Number(form.elements['infant'].value||0),
+      adult: n(form.elements['adult'].value),
+      child: n(form.elements['child'].value),
+      infant: n(form.elements['infant'].value),
       arrivalDate: form.elements['arrivalDate'].value,
       arrivalTime: form.elements['arrivalTime'].value,
       departDate: form.elements['departDate'].value,
@@ -228,7 +228,7 @@
       transport: getTransport(),
       days,
       ticketDate: form.elements['ticketDate'].value || '',
-      ticketCount: Number(form.elements['ticketCount'].value||0),
+      ticketCount: n(form.elements['ticketCount'].value),
       note: form.elements['note'].value || '',
       now: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
     };
