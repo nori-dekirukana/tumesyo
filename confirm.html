@@ -6,7 +6,7 @@
 <title>帰参届（確認）</title>
 <style>
   body{font-family:system-ui,sans-serif; padding:16px; max-width:860px; margin:0 auto;}
-  h1{font-size:1.3rem; margin:0 0 12px;}
+  h1{font-size:1.6rem; margin:0 0 12px;}
   table{width:100%; border-collapse:collapse; margin-top:8px;}
   th,td{border:1px solid #ddd; padding:6px; text-align:left;}
   .row-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
@@ -27,10 +27,9 @@
     <button id="sendMail">メールで送信（テキスト）</button>
     <button id="sendLine">LINEで送る</button>
     <button id="saveHistory">履歴に保存</button>
-    <a class="small" href="./index.html">編集に戻る</a>
   </div>
 <script>
-  const TO_EMAIL = 'norinet.216@gmail.com'; // 送信先
+  const TO_EMAIL = 'norinet.216@gmail.com';
   const SESSION_KEY = 'kisanFormV2';
   const HISTORY_KEY = 'kisanHistoryV2';
 
@@ -38,16 +37,20 @@
   if (!data){ location.href='./index.html'; }
   const preview = document.getElementById('preview');
 
+  const fmtMD = (ymd)=> {
+    if (!ymd) return '';
+    const [y,m,d] = ymd.split('-'); return `${Number(m)}/${Number(d)}`;
+  };
+
   function esc(s=''){return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m] ));}
 
-  // 画面プレビュー（HTMLの見やすい表）
   function buildDaysTableHTML(days){
     return `
       <table>
         <thead><tr><th>日付</th><th>朝食</th><th>昼食</th><th>夕食</th><th>宿泊</th></tr></thead>
         <tbody>
           ${days.map(d=>`<tr>
-            <td>${esc(d.date)}</td><td>${d.breakfast}</td><td>${d.lunch}</td><td>${d.dinner}</td><td>${d.stay}</td>
+            <td>${esc(fmtMD(d.date))}</td><td>${d.breakfast||0}</td><td>${d.lunch||0}</td><td>${d.dinner||0}</td><td>${d.stay||0}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -57,13 +60,13 @@
     const total = (d.adult||0)+(d.child||0)+(d.infant||0);
     return `
       <table>
-        <tr><th>教会名</th><td>${esc(d.kyokai)}</td></tr>
+        <tr><th>教会名（団体名）</th><td>${esc(d.kyokai)}</td></tr>
         <tr><th>帰参者名（代表）</th><td>${esc(d.kisan)}</td></tr>
-        <tr><th>人数</th><td>大人${d.adult} 子供${d.child} 乳児${d.infant}（計${total}）</td></tr>
-        <tr><th>到着</th><td>${esc(d.arrivalDate)} ${esc(d.arrivalTime)}</td></tr>
-        <tr><th>発</th><td>${esc(d.departDate)} ${esc(d.departTime)}</td></tr>
+        <tr><th>人数</th><td>大人${d.adult||0} 子供${d.child||0} 乳児${d.infant||0}（計${total}）</td></tr>
+        <tr><th>詰所到着</th><td>${esc(fmtMD(d.arrivalDate))} ${esc(d.arrivalTime)}</td></tr>
+        <tr><th>出発</th><td>${esc(fmtMD(d.departDate))} ${esc(d.departTime)}</td></tr>
         <tr><th>交通</th><td>${esc(d.transport.type)}（${esc(d.transport.detail)}）</td></tr>
-        <tr><th>直属食券 申込</th><td>${esc(d.ticketDate||'')} ／ 食数 ${d.ticketCount||0}</td></tr>
+        <tr><th>直属食券 申込</th><td>${esc(fmtMD(d.ticketDate)||'')} ／ 食数 ${d.ticketCount||0}</td></tr>
         <tr><th>備考</th><td>${esc(d.note||'')}</td></tr>
       </table>
       <h3>日別 内訳</h3>
@@ -73,24 +76,24 @@
     `;
   }
 
-  // メール/LINE用の“表風テキスト”
-  function pad(str, len){ str=String(str); const w=len - str.length; return str + (w>0 ? ' '.repeat(w) : ''); }
+  // テキスト本文（メール/LINE）
+  function pad(str,len){str=String(str);const w=len-str.length;return str+(w>0?' '.repeat(w):'');}
   function buildDaysTableText(days){
-    const header = `日付        朝  昼  夜  宿`;
-    const rows = days.map(d => `${d.date}  ${pad(d.breakfast,2)}  ${pad(d.lunch,2)}  ${pad(d.dinner,2)}  ${pad(d.stay,2)}`);
+    const header = `日付   朝 昼 夜 宿`;
+    const rows = (days||[]).map(d=> `${pad(fmtMD(d.date),5)} ${pad(d.breakfast||0,2)} ${pad(d.lunch||0,2)} ${pad(d.dinner||0,2)} ${pad(d.stay||0,2)}`);
     return [header, ...rows].join('\n');
   }
   function buildText(d){
     const total = (d.adult||0)+(d.child||0)+(d.infant||0);
     return [
       '【帰参届】',
-      `教会名: ${d.kyokai}`,
+      `教会名（団体名）: ${d.kyokai}`,
       `帰参者名: ${d.kisan}`,
-      `人数: 大人${d.adult} 子供${d.child} 乳児${d.infant}（計${total}）`,
-      `到着: ${d.arrivalDate} ${d.arrivalTime}`,
-      `発: ${d.departDate} ${d.departTime}`,
+      `人数: 大人${d.adult||0} 子供${d.child||0} 乳児${d.infant||0}（計${total}）`,
+      `詰所到着: ${fmtMD(d.arrivalDate)} ${d.arrivalTime}`,
+      `出発: ${fmtMD(d.departDate)} ${d.departTime}`,
       `交通: ${d.transport.type}（${d.transport.detail}）`,
-      `直属食券: ${d.ticketDate||''} ／ 食数 ${d.ticketCount||0}`,
+      `直属食券: ${fmtMD(d.ticketDate)||''} ／ 食数 ${d.ticketCount||0}`,
       `備考: ${d.note||''}`,
       '',
       '日別 内訳（表）',
@@ -108,19 +111,18 @@
     localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0,200)));
   }
 
-  // 画面に表示
+  // 表示
   document.getElementById('preview').innerHTML = buildPreview(data);
 
-  // メール送信（端末のメールアプリ）
+  // メール
   document.getElementById('sendMail').addEventListener('click', ()=>{
-    const subject = `【帰参届】${data.kyokai}／${data.kisan}（${data.arrivalDate} 到着）`;
+    const subject = `【帰参届】${data.kyokai}／${data.kisan}（${fmtMD(data.arrivalDate)} 到着）`;
     const body = buildText(data);
-    const url = `mailto:${encodeURIComponent(TO_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    location.href = url;
+    location.href = `mailto:${encodeURIComponent(TO_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     addToHistory(data);
   });
 
-  // LINEで送る
+  // LINE
   document.getElementById('sendLine').addEventListener('click', ()=>{
     const text = buildText(data);
     window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`,'_blank');
