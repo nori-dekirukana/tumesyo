@@ -5,33 +5,36 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>帰参届（確認）</title>
 <style>
-  body{font-family:system-ui,sans-serif; padding:16px; max-width:860px; margin:0 auto; background:#f7f7f7;}
+  body{font-family:system-ui,sans-serif; padding:16px; background:#f7f7f7;}
   h1{font-size:2rem; margin:8px 0 12px; text-align:center;}
-  .wrap{background:#fff; padding:16px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.06);}
-  table{width:100%; border-collapse:collapse; margin-top:8px;}
-  th,td{border:1px solid #ddd; padding:6px; text-align:left;}
-  .row-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; justify-content:center;}
+  #cap{background:#fff; padding:16px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.06); max-width:900px; margin:0 auto;}
+  table{width:100%; border-collapse:collapse; margin-top:8px; font-size:16px;}
+  th,td{border:1px solid #bbb; padding:8px; text-align:left;}
+  .row-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; justify-content:center;}
   .small{color:#666; font-size:.9rem; text-align:center; margin-top:6px;}
+  /* 画像化時だけ適用して文字・枠を太くする */
+  #cap.for-shot{font-size:18px;}
+  #cap.for-shot table{font-size:18px;}
+  #cap.for-shot th,#cap.for-shot td{border:2px solid #666; padding:10px; font-weight:600;}
+  #cap.for-shot h1{font-size:2.4rem;}
 </style>
 </head>
 <body>
-  <div id="cap" class="wrap">
+  <div id="cap">
     <h1>帰参届（確認）</h1>
     <div id="preview"></div>
   </div>
   <div class="row-actions">
     <button id="shareImage">画像で送る（スクショ）</button>
-    <button id="saveImage">画像を保存</button>
     <button id="backEdit">編集に戻る</button>
   </div>
-  <!-- スクショ用ライブラリ（CDN） -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
-  const TO_EMAIL = 'norinet.216@gmail.com';
   const SESSION_KEY = 'kisanFormV2';
 
   const data = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
   if (!data){ location.href='./index.html'; }
+  const cap = document.getElementById('cap');
   const preview = document.getElementById('preview');
 
   const WEEKS = ['日','月','火','水','木','金','土'];
@@ -42,7 +45,6 @@
   };
   function esc(s=''){return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m] ));}
 
-  // 画面プレビュー（HTML表）
   function buildDaysTableHTML(days){
     return `
       <table>
@@ -76,10 +78,12 @@
   }
   preview.innerHTML = buildPreview(data);
 
-  // 画像化して共有（スクショ）
+  // 画像化：キャプチャ前だけ「for-shot」クラスで太字・大きめに、解像度scale=3
   async function captureBlob(){
-    const el = document.getElementById('cap');
-    const canvas = await html2canvas(el, { scale:2, backgroundColor:'#fff' });
+    cap.classList.add('for-shot');
+    await new Promise(r=>setTimeout(r,0));
+    const canvas = await html2canvas(cap, { scale:3, backgroundColor:'#fff' });
+    cap.classList.remove('for-shot');
     return await new Promise(res => canvas.toBlob(b => res(b), 'image/png'));
   }
 
@@ -87,10 +91,9 @@
     try{
       const blob = await captureBlob();
       const file = new File([blob], `kisantodoke_${Date.now()}.png`, { type:'image/png' });
-      const subject = `【帰参届】${data.kyokai}／${data.kisan}（${fmtMD(data.arrivalDate)} 到着）`;
 
       if (navigator.canShare && navigator.canShare({ files:[file] })) {
-        await navigator.share({ files:[file], title: subject, text: '帰参届（画像）' });
+        await navigator.share({ files:[file], title: '帰参届', text: '帰参届（画像）' });
       } else {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -102,18 +105,7 @@
     }catch(e){ alert('画像の作成に失敗しました: ' + e.message); }
   });
 
-  document.getElementById('saveImage').addEventListener('click', async ()=>{
-    try{
-      const blob = await captureBlob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `kisantodoke_${Date.now()}.png`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }catch(e){ alert('保存に失敗しました: ' + e.message); }
-  });
-
-  // 編集に戻る（sessionStorageは保持したまま）
+  // 編集に戻る（入力値はsessionStorageに残る）
   document.getElementById('backEdit').addEventListener('click', ()=>{
     location.href = './index.html';
   });
