@@ -3,136 +3,241 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>帰参届（確認）</title>
+<title>帰参届（入力）</title>
 <style>
-  body{font-family:system-ui,sans-serif; padding:16px; max-width:860px; margin:0 auto;}
+  body{font-family:system-ui, sans-serif; padding:16px; max-width:860px; margin:0 auto;}
   h1{font-size:1.3rem; margin:0 0 12px;}
+  label{display:block; margin:12px 0 6px; font-weight:700;}
+  input, select, button, textarea{width:100%; padding:10px; font-size:16px; box-sizing:border-box;}
+  textarea{min-height:96px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .box{border:1px solid #ddd; padding:12px; border-radius:6px; margin-top:8px;}
   table{width:100%; border-collapse:collapse; margin-top:8px;}
   th,td{border:1px solid #ddd; padding:6px; text-align:left;}
-  .row-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .row-actions{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .small{font-size:.9rem; color:#666;}
+  .muted{color:#666;}
+  .radio{display:flex; gap:16px; margin:6px 0;}
+  .radio label{font-weight:400;}
+  .right{text-align:right;}
   nav a{margin-right:12px;}
-  .small{color:#666; font-size:.9rem;}
-  .note{margin-top:8px;}
+  .note{margin-top:8px; color:#444;}
   .warn{margin-top:12px; font-weight:700;}
 </style>
 </head>
 <body>
   <nav>
-    <a href="./index.html">入力に戻る</a>
+    <a href="./index.html">入力</a>
     <a href="./history.html">履歴</a>
   </nav>
-  <h1>帰参届（確認）</h1>
-  <div id="preview"></div>
-  <div class="row-actions">
-    <button id="sendMail">メールで送信（テキスト）</button>
-    <button id="sendLine">LINEで送る</button>
-    <button id="saveHistory">履歴に保存</button>
-    <a class="small" href="./index.html">編集に戻る</a>
+  <h1>帰参届（入力）</h1>
+  <form id="form">
+    <label>教会名</label>
+    <input type="text" name="kyokai" required>
+コードをコピーする<label>帰参者名（代表）</label>
+<input type="text" name="kisan" required>
+
+<div class="box">
+  <strong>人数</strong>
+  <div class="grid3">
+    <div><label class="muted">大人</label><input type="number" name="adult" min="0" value="1" required></div>
+    <div><label class="muted">子供</label><input type="number" name="child" min="0" value="0"></div>
+    <div><label class="muted">乳児</label><input type="number" name="infant" min="0" value="0"></div>
   </div>
+</div>
+
+<div class="box">
+  <strong>詰所 到着・発</strong>
+  <div class="grid2">
+    <div>
+      <label class="muted">到着日</label>
+      <input type="date" name="arrivalDate" required>
+    </div>
+    <div>
+      <label class="muted">到着 予定時間</label>
+      <input type="time" name="arrivalTime" required>
+    </div>
+    <div>
+      <label class="muted">発日</label>
+      <input type="date" name="departDate" required>
+    </div>
+    <div>
+      <label class="muted">発 予定時間</label>
+      <input type="time" name="departTime" required>
+    </div>
+  </div>
+</div>
+
+<div class="box">
+  <strong>交通</strong>
+  <div class="radio">
+    <label><input type="radio" name="transportType" value="公共交通" checked> 公共交通</label>
+    <label><input type="radio" name="transportType" value="独自"> 独自</label>
+  </div>
+  <div id="publicWrap">
+    <label class="muted">公共交通の種別</label>
+    <select name="publicTransport">
+      <option value="鉄道">鉄道</option>
+      <option value="夜行バス">夜行バス</option>
+    </select>
+  </div>
+  <div id="privateWrap" style="display:none;">
+    <label class="muted">独自の種別</label>
+    <select name="privateTransport">
+      <option value="観光バス">観光バス</option>
+      <option value="マイクロバス">マイクロバス</option>
+      <option value="乗用車">乗用車</option>
+      <option value="他">他</option>
+    </select>
+    <input type="text" name="privateOther" placeholder="他の場合は入力">
+  </div>
+</div>
+
+<div class="box">
+  <strong>日付ごとの 食事・宿泊</strong>
+  <div class="small">各日について、必要数を入力してください（0も可）。</div>
+  <table id="daysTable">
+    <thead>
+      <tr>
+        <th>日付</th><th>朝食</th><th>昼食</th><th>夕食</th><th>宿泊</th><th class="right">操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div class="row-actions">
+    <button type="button" id="addRowBtn">行を追加</button>
+    <button type="button" id="autoFillBtn">到着〜発の期間を自動追加</button>
+  </div>
+</div>
+
+<div class="box">
+  <strong>直属食券 申込</strong>
+  <div class="grid2">
+    <div>
+      <label class="muted">日付</label>
+      <input type="date" name="ticketDate">
+    </div>
+    <div>
+      <label class="muted">食数</label>
+      <input type="number" name="ticketCount" min="0" value="0">
+    </div>
+  </div>
+  <div class="note">※直属食券が発行される日、申込〆切日をよくご確認ください。</div>
+</div>
+
+<div class="box">
+  <strong>備考</strong>
+  <textarea name="note" placeholder="自由入力"></textarea>
+</div>
+
+<div class="warn">◎変更や取消は到着2日前迄に必ずご連絡下さい。</div>
+
+<div class="row-actions">
+  <button type="submit" id="goConfirm">確認ページへ</button>
+  <a class="small" href="./history.html">履歴を見る</a>
+</div>
+
+  </form>
 <script>
-  const TO_EMAIL = 'norinet.216@gmail.com'; // 送信先
   const SESSION_KEY = 'kisanFormV2';
-  const HISTORY_KEY = 'kisanHistoryV2';
 
-  const data = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-  if (!data){ location.href='./index.html'; }
-  const preview = document.getElementById('preview');
+  const form = document.getElementById('form');
+  const daysTbody = document.querySelector('#daysTable tbody');
+  const addRowBtn = document.getElementById('addRowBtn');
+  const autoFillBtn = document.getElementById('autoFillBtn');
 
-  function esc(s=''){return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m] ));}
+  // 交通の切替
+  form.addEventListener('change', e=>{
+    if (e.target.name === 'transportType') {
+      const t = e.target.value;
+      document.getElementById('publicWrap').style.display = (t==='公共交通')?'block':'none';
+      document.getElementById('privateWrap').style.display = (t==='独自')?'block':'none';
+    }
+  });
 
-  // 画面プレビュー（HTMLの見やすい表）
-  function buildDaysTableHTML(days){
-    return `
-      <table>
-        <thead><tr><th>日付</th><th>朝食</th><th>昼食</th><th>夕食</th><th>宿泊</th></tr></thead>
-        <tbody>
-          ${days.map(d=>`<tr>
-            <td>${esc(d.date)}</td><td>${d.breakfast}</td><td>${d.lunch}</td><td>${d.dinner}</td><td>${d.stay}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
+  function z(n){return String(n).padStart(2,'0');}
+  function addRow(dateStr=''){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="date" value="${dateStr}"></td>
+      <td><input type="number" min="0" value="0" style="width:90px"></td>
+      <td><input type="number" min="0" value="0" style="width:90px"></td>
+      <td><input type="number" min="0" value="0" style="width:90px"></td>
+      <td><input type="number" min="0" value="0" style="width:90px"></td>
+      <td class="right"><button type="button" data-act="del">削除</button></td>
     `;
+    daysTbody.appendChild(tr);
   }
-  function buildPreview(d){
-    const total = (d.adult||0)+(d.child||0)+(d.infant||0);
-    return `
-      <table>
-        <tr><th>教会名</th><td>${esc(d.kyokai)}</td></tr>
-        <tr><th>帰参者名（代表）</th><td>${esc(d.kisan)}</td></tr>
-        <tr><th>人数</th><td>大人${d.adult} 子供${d.child} 乳児${d.infant}（計${total}）</td></tr>
-        <tr><th>到着</th><td>${esc(d.arrivalDate)} ${esc(d.arrivalTime)}</td></tr>
-        <tr><th>発</th><td>${esc(d.departDate)} ${esc(d.departTime)}</td></tr>
-        <tr><th>交通</th><td>${esc(d.transport.type)}（${esc(d.transport.detail)}）</td></tr>
-        <tr><th>直属食券 申込</th><td>${esc(d.ticketDate||'')} ／ 食数 ${d.ticketCount||0}</td></tr>
-        <tr><th>備考</th><td>${esc(d.note||'')}</td></tr>
-      </table>
-      <h3>日別 内訳</h3>
-      ${buildDaysTableHTML(d.days)}
-      <div class="note">※直属食券が発行される日、申込〆切日をよくご確認ください。</div>
-      <div class="warn">◎変更や取消は到着2日前迄に必ずご連絡下さい。</div>
-    `;
+  function dateRange(start, end){
+    const out=[]; const s=new Date(start+'T00:00:00'); const e=new Date(end+'T00:00:00');
+    if (isNaN(s)||isNaN(e)||s>e) return out;
+    for (let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){
+      out.push(`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`);
+    }
+    return out;
   }
+  addRowBtn.addEventListener('click', ()=>addRow(''));
+  autoFillBtn.addEventListener('click', ()=>{
+    const a=form.elements['arrivalDate'].value, b=form.elements['departDate'].value;
+    if(!a||!b){ alert('到着日と発日を先に入力してください'); return; }
+    daysTbody.innerHTML=''; for(const d of dateRange(a,b)) addRow(d);
+  });
+  daysTbody.addEventListener('click', (e)=>{
+    const btn=e.target.closest('button'); if(!btn) return;
+    if(btn.dataset.act==='del') btn.closest('tr').remove();
+  });
+  addRow(''); // 初期行
 
-  // メール/LINEに入れる“表風テキスト”
-  function pad(str, len){ str=String(str); const w=len - str.length; return str + (w>0 ? ' '.repeat(w) : ''); }
-  function buildDaysTableText(days){
-    // 見やすい等幅カラム（メール/LINE向けのプレーンテキスト）
-    const header = `日付        朝  昼  夜  宿`;
-    const rows = days.map(d => {
-      return `${d.date}  ${pad(d.breakfast,2)}  ${pad(d.lunch,2)}  ${pad(d.dinner,2)}  ${pad(d.stay,2)}`;
+  function collectDays(){
+    const rows=[]; daysTbody.querySelectorAll('tr').forEach(tr=>{
+      const [date, bf, lu, di, stay] = tr.querySelectorAll('input');
+      if (date.value) rows.push({
+        date: date.value,
+        breakfast: Number(bf.value||0),
+        lunch: Number(lu.value||0),
+        dinner: Number(di.value||0),
+        stay: Number(stay.value||0),
+      });
     });
-    return [header, ...rows].join('\n');
+    return rows;
   }
-  function buildText(d){
-    const total = (d.adult||0)+(d.child||0)+(d.infant||0);
-    return [
-      '【帰参届】',
-      `教会名: ${d.kyokai}`,
-      `帰参者名: ${d.kisan}`,
-      `人数: 大人${d.adult} 子供${d.child} 乳児${d.infant}（計${total}）`,
-      `到着: ${d.arrivalDate} ${d.arrivalTime}`,
-      `発: ${d.departDate} ${d.departTime}`,
-      `交通: ${d.transport.type}（${d.transport.detail}）`,
-      `直属食券: ${d.ticketDate||''} ／ 食数 ${d.ticketCount||0}`,
-      `備考: ${d.note||''}`,
-      '',
-      '日別 内訳（表）',
-      buildDaysTableText(d.days),
-      '',
-      '※直属食券が発行される日、申込〆切日をよくご確認ください。',
-      '◎変更や取消は到着2日前迄に必ずご連絡下さい。',
-      `送信: ${new Date().toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}`
-    ].join('\n');
+  function getTransport(){
+    const type = form.elements['transportType'].value;
+    if (type==='公共交通') return { type, detail: form.elements['publicTransport'].value };
+    const d = form.elements['privateTransport'].value;
+    const other = (d==='他') ? (form.elements['privateOther'].value||'他') : d;
+    return { type, detail: other };
   }
 
-  function addToHistory(d){
-    const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    h.unshift({ ...d, savedAt: new Date().toISOString() });
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0,200)));
-  }
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const days = collectDays();
+    if (days.length===0){ alert('少なくとも1日分の「日付」を入力してください'); return; }
 
-  // 画面に反映
-  document.getElementById('preview').innerHTML = buildPreview(data);
+    const data = {
+      kyokai: form.elements['kyokai'].value.trim(),
+      kisan: form.elements['kisan'].value.trim(),
+      adult: Number(form.elements['adult'].value||0),
+      child: Number(form.elements['child'].value||0),
+      infant: Number(form.elements['infant'].value||0),
+      arrivalDate: form.elements['arrivalDate'].value,
+      arrivalTime: form.elements['arrivalTime'].value,
+      departDate: form.elements['departDate'].value,
+      departTime: form.elements['departTime'].value,
+      transport: getTransport(),
+      days,
+      ticketDate: form.elements['ticketDate'].value || '',
+      ticketCount: Number(form.elements['ticketCount'].value||0),
+      note: form.elements['note'].value || '',
+      now: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+    };
 
-  // メール送信（端末のメールアプリでプレーンテキスト送付）
-  document.getElementById('sendMail').addEventListener('click', ()=>{
-    const subject = `【帰参届】${data.kyokai}／${data.kisan}（${data.arrivalDate} 到着）`;
-    const body = buildText(data);
-    const url = `mailto:${encodeURIComponent(TO_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    location.href = url;
-    addToHistory(data);
-  });
-
-  // LINEで送る
-  document.getElementById('sendLine').addEventListener('click', ()=>{
-    const text = buildText(data);
-    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`,'_blank');
-    addToHistory(data);
-  });
-
-  document.getElementById('saveHistory').addEventListener('click', ()=>{
-    addToHistory(data);
-    alert('履歴に保存しました。履歴ページから確認できます。');
+    if (!data.kyokai || !data.kisan || !data.arrivalDate || !data.arrivalTime || !data.departDate || !data.departTime){
+      alert('未入力の必須項目があります'); return;
+    }
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+    location.href = './confirm.html';
   });
 </script>
 </body>
