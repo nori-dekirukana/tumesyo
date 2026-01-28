@@ -6,7 +6,7 @@
 <title>帰参届</title>
 <style>
   body{font-family:system-ui, sans-serif; padding:16px; max-width:860px; margin:0 auto;}
-  h1{font-size:1.8rem; margin:0 0 12px;}
+  h1{font-size:2.2rem; margin:8px 0 16px; text-align:center;}
   label{display:block; margin:12px 0 6px; font-weight:700;}
   input, select, button, textarea{width:100%; padding:10px; font-size:16px; box-sizing:border-box;}
   textarea{min-height:96px;}
@@ -21,16 +21,11 @@
   .radio{display:flex; gap:16px; margin:6px 0;}
   .radio label{font-weight:400;}
   .right{text-align:right;}
-  nav a{margin-right:12px;}
   .note{margin-top:8px; color:#444;}
   .warn{margin-top:12px; font-weight:700;}
 </style>
 </head>
 <body>
-  <nav>
-    <a href="./index.html">入力</a>
-    <a href="./history.html">履歴</a>
-  </nav>
   <h1>帰参届</h1>
   <form id="form">
     <label>教会名（団体名）</label>
@@ -96,19 +91,13 @@
 
 <div class="box">
   <strong>日付ごとの 食事・宿泊</strong>
-  <div class="small">各日について、必要数を入力してください（空欄可）。</div>
+  <div class="small">到着日と出発日を入れると、自動で期間が表示されます（数値は空欄でOK）。</div>
   <table id="daysTable">
     <thead>
-      <tr>
-        <th>日付</th><th>朝食</th><th>昼食</th><th>夕食</th><th>宿泊</th><th class="right">操作</th>
-      </tr>
+      <tr><th>日付</th><th>朝食</th><th>昼食</th><th>夕食</th><th>宿泊</th></tr>
     </thead>
     <tbody></tbody>
   </table>
-  <div class="row-actions">
-    <button type="button" id="addRowBtn">行を追加</button>
-    <button type="button" id="autoFillBtn">到着〜出発の期間を自動追加</button>
-  </div>
 </div>
 
 <div class="box">
@@ -135,16 +124,13 @@
 
 <div class="row-actions">
   <button type="submit" id="goConfirm">確認ページへ</button>
-  <a class="small" href="./history.html">履歴を見る</a>
 </div>
 
   </form>
 <script>
   const SESSION_KEY = 'kisanFormV2';
   const form = document.getElementById('form');
-  const daysTbody = document.querySelector('#daysTable tbody');
-  const addRowBtn = document.getElementById('addRowBtn');
-  const autoFillBtn = document.getElementById('autoFillBtn');
+  const tbody = document.querySelector('#daysTable tbody');
 
   // 交通の切替
   form.addEventListener('change', e=>{
@@ -156,47 +142,39 @@
   });
 
   function z(n){return String(n).padStart(2,'0');}
-  function addRow(dateStr=''){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input type="date" value="${dateStr}"></td>
-      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
-      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
-      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
-      <td><input type="number" min="0" style="width:90px" placeholder=""></td>
-      <td class="right"><button type="button" data-act="del">削除</button></td>
-    `;
-    daysTbody.appendChild(tr);
-  }
-  function dateRange(start, end){
-    const out=[]; const s=new Date(start+'T00:00:00'); const e=new Date(end+'T00:00:00');
+  function rangeDates(a,b){
+    const out=[]; const s=new Date(a+'T00:00:00'); const e=new Date(b+'T00:00:00');
     if (isNaN(s)||isNaN(e)||s>e) return out;
-    for (let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){
+    for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){
       out.push(`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`);
     }
     return out;
   }
-  addRowBtn.addEventListener('click', ()=>addRow(''));
-  autoFillBtn.addEventListener('click', ()=>{
+  function renderDays(){
     const a=form.elements['arrivalDate'].value, b=form.elements['departDate'].value;
-    if(!a||!b){ alert('詰所到着日と出発日を先に入力してください'); return; }
-    daysTbody.innerHTML=''; for(const d of dateRange(a,b)) addRow(d);
-  });
-  daysTbody.addEventListener('click', (e)=>{
-    const btn=e.target.closest('button'); if(!btn) return;
-    if(btn.dataset.act==='del') btn.closest('tr').remove();
-  });
-  addRow(''); // 初期行
+    if(!a||!b){ tbody.innerHTML=''; return; }
+    const dates=rangeDates(a,b);
+    tbody.innerHTML = dates.map(d=>`
+      <tr>
+        <td><input type="date" value="${d}"></td>
+        <td><input type="number" min="0" placeholder=""></td>
+        <td><input type="number" min="0" placeholder=""></td>
+        <td><input type="number" min="0" placeholder=""></td>
+        <td><input type="number" min="0" placeholder=""></td>
+      </tr>`).join('');
+  }
+  form.elements['arrivalDate'].addEventListener('change', renderDays);
+  form.elements['departDate'].addEventListener('change', renderDays);
 
   function collectDays(){
-    const rows=[]; daysTbody.querySelectorAll('tr').forEach(tr=>{
-      const [date, bf, lu, di, stay] = tr.querySelectorAll('input');
-      if (date.value) rows.push({
+    const rows=[]; tbody.querySelectorAll('tr').forEach(tr=>{
+      const [date,bf,lu,di,st]=tr.querySelectorAll('input');
+      if(date.value) rows.push({
         date: date.value,
-        breakfast: Number((bf.value||0)),
-        lunch: Number((lu.value||0)),
-        dinner: Number((di.value||0)),
-        stay: Number((stay.value||0)),
+        breakfast: Number(bf.value||0),
+        lunch: Number(lu.value||0),
+        dinner: Number(di.value||0),
+        stay: Number(st.value||0),
       });
     });
     return rows;
@@ -212,9 +190,6 @@
 
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
-    const days = collectDays();
-    if (days.length===0){ alert('少なくとも1日分の「日付」を入力してください'); return; }
-
     const data = {
       kyokai: form.elements['kyokai'].value.trim(),
       kisan: form.elements['kisan'].value.trim(),
@@ -226,16 +201,16 @@
       departDate: form.elements['departDate'].value,
       departTime: form.elements['departTime'].value,
       transport: getTransport(),
-      days,
+      days: collectDays(),
       ticketDate: form.elements['ticketDate'].value || '',
       ticketCount: n(form.elements['ticketCount'].value),
       note: form.elements['note'].value || '',
       now: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
     };
-
     if (!data.kyokai || !data.kisan || !data.arrivalDate || !data.arrivalTime || !data.departDate || !data.departTime){
       alert('未入力の必須項目があります'); return;
     }
+    if (data.days.length===0){ alert('到着日と出発日を入れてください（期間が自動表示されます）'); return; }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
     location.href = './confirm.html';
   });
