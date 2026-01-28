@@ -20,14 +20,11 @@
   .muted{color:#666;}
   .radio{display:flex; gap:16px; margin:6px 0;}
   .radio label{font-weight:400;}
-  .right{text-align:right;}
-  .note{margin-top:8px; color:#444;}
-  .warn{margin-top:12px; font-weight:700;}
 </style>
 </head>
 <body>
   <h1>帰参届</h1>
-  <form id="form">
+  <form id="form" autocomplete="off">
     <label>教会名（団体名）</label>
     <input type="text" name="kyokai" required>
 コードをコピーする<label>帰参者名（代表）</label>
@@ -36,9 +33,9 @@
 <div class="box">
   <strong>人数</strong>
   <div class="grid3">
-    <div><label class="muted">大人</label><input type="number" name="adult" min="0" placeholder=""></div>
-    <div><label class="muted">子供</label><input type="number" name="child" min="0" placeholder=""></div>
-    <div><label class="muted">乳児</label><input type="number" name="infant" min="0" placeholder=""></div>
+    <div><label class="muted">大人</label><input type="number" name="adult" min="0" inputmode="numeric" placeholder=""></div>
+    <div><label class="muted">子供</label><input type="number" name="child" min="0" inputmode="numeric" placeholder=""></div>
+    <div><label class="muted">乳児</label><input type="number" name="infant" min="0" inputmode="numeric" placeholder=""></div>
   </div>
 </div>
 
@@ -109,18 +106,16 @@
     </div>
     <div>
       <label class="muted">食数</label>
-      <input type="number" name="ticketCount" min="0" placeholder="">
+      <input type="number" name="ticketCount" min="0" inputmode="numeric" placeholder="">
     </div>
   </div>
-  <div class="note">※直属食券が発行される日、申込〆切日をよくご確認ください。</div>
+  <div class="small">※直属食券が発行される日、申込〆切日をよくご確認ください。</div>
 </div>
 
 <div class="box">
   <strong>備考</strong>
   <textarea name="note" placeholder="自由入力"></textarea>
 </div>
-
-<div class="warn">◎変更や取消は到着2日前迄に必ずご連絡下さい。</div>
 
 <div class="row-actions">
   <button type="submit" id="goConfirm">確認ページへ</button>
@@ -132,7 +127,6 @@
   const form = document.getElementById('form');
   const tbody = document.querySelector('#daysTable tbody');
 
-  // 交通の切替
   function updateTransportUI(){
     const t = form.elements['transportType'].value;
     document.getElementById('publicWrap').style.display = (t==='公共交通')?'block':'none';
@@ -158,10 +152,10 @@
     tbody.innerHTML = dates.map(d=>`
       <tr>
         <td><input type="date" value="${d}"></td>
-        <td><input type="number" min="0" placeholder=""></td>
-        <td><input type="number" min="0" placeholder=""></td>
-        <td><input type="number" min="0" placeholder=""></td>
-        <td><input type="number" min="0" placeholder=""></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder=""></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder=""></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder=""></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder=""></td>
       </tr>`).join('');
   }
   function renderDaysFromData(days=[]){
@@ -169,10 +163,10 @@
     tbody.innerHTML = days.map(r=>`
       <tr>
         <td><input type="date" value="${r.date||''}"></td>
-        <td><input type="number" min="0" placeholder="" value="${r.breakfast||''}"></td>
-        <td><input type="number" min="0" placeholder="" value="${r.lunch||''}"></td>
-        <td><input type="number" min="0" placeholder="" value="${r.dinner||''}"></td>
-        <td><input type="number" min="0" placeholder="" value="${r.stay||''}"></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="" value="${r.breakfast||''}"></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="" value="${r.lunch||''}"></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="" value="${r.dinner||''}"></td>
+        <td><input type="number" min="0" inputmode="numeric" placeholder="" value="${r.stay||''}"></td>
       </tr>`).join('');
   }
   form.elements['arrivalDate'].addEventListener('change', renderDaysFromRange);
@@ -200,7 +194,7 @@
   }
   function n(v){ return Number(v||0); }
 
-  // セッションから自動復元
+  // 前回入力の自動復元
   function restoreFromSession(){
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return;
@@ -215,7 +209,6 @@
       form.elements['arrivalTime'].value = d.arrivalTime || '';
       form.elements['departDate'].value = d.departDate || '';
       form.elements['departTime'].value = d.departTime || '';
-      // 交通
       if (d.transport?.type === '独自') form.elements['transportType'].value = '独自';
       updateTransportUI();
       if (d.transport?.type === '公共交通') {
@@ -224,9 +217,7 @@
         form.elements['privateTransport'].value = ['観光バス','マイクロバス','乗用車','他'].includes(d.transport?.detail) ? d.transport.detail : '他';
         form.elements['privateOther'].value = (['観光バス','マイクロバス','乗用車'].includes(d.transport?.detail)) ? '' : (d.transport?.detail || '');
       }
-      // 日別
       renderDaysFromData(d.days||[]);
-      // 直属食券・備考
       form.elements['ticketDate'].value = d.ticketDate || '';
       form.elements['ticketCount'].value = (d.ticketCount ?? '');
       form.elements['note'].value = d.note || '';
