@@ -15,7 +15,7 @@
   .box{border:1px solid #ddd; padding:12px; border-radius:6px; margin-top:8px;}
   table{width:100%; border-collapse:collapse; margin-top:8px;}
   th,td{border:1px solid #ddd; padding:6px; text-align:left;}
-  .row-actions{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .row-actions{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; justify-content:center;}
   .small{font-size:.9rem; color:#666;}
   .muted{color:#666;}
   .radio{display:flex; gap:16px; margin:6px 0;}
@@ -133,12 +133,13 @@
   const tbody = document.querySelector('#daysTable tbody');
 
   // 交通の切替
+  function updateTransportUI(){
+    const t = form.elements['transportType'].value;
+    document.getElementById('publicWrap').style.display = (t==='公共交通')?'block':'none';
+    document.getElementById('privateWrap').style.display = (t==='独自')?'block':'none';
+  }
   form.addEventListener('change', e=>{
-    if (e.target.name === 'transportType') {
-      const t = e.target.value;
-      document.getElementById('publicWrap').style.display = (t==='公共交通')?'block':'none';
-      document.getElementById('privateWrap').style.display = (t==='独自')?'block':'none';
-    }
+    if (e.target.name === 'transportType') updateTransportUI();
   });
 
   function z(n){return String(n).padStart(2,'0');}
@@ -150,7 +151,7 @@
     }
     return out;
   }
-  function renderDays(){
+  function renderDaysFromRange(){
     const a=form.elements['arrivalDate'].value, b=form.elements['departDate'].value;
     if(!a||!b){ tbody.innerHTML=''; return; }
     const dates=rangeDates(a,b);
@@ -163,8 +164,19 @@
         <td><input type="number" min="0" placeholder=""></td>
       </tr>`).join('');
   }
-  form.elements['arrivalDate'].addEventListener('change', renderDays);
-  form.elements['departDate'].addEventListener('change', renderDays);
+  function renderDaysFromData(days=[]){
+    if(!days || !days.length){ tbody.innerHTML=''; return; }
+    tbody.innerHTML = days.map(r=>`
+      <tr>
+        <td><input type="date" value="${r.date||''}"></td>
+        <td><input type="number" min="0" placeholder="" value="${r.breakfast||''}"></td>
+        <td><input type="number" min="0" placeholder="" value="${r.lunch||''}"></td>
+        <td><input type="number" min="0" placeholder="" value="${r.dinner||''}"></td>
+        <td><input type="number" min="0" placeholder="" value="${r.stay||''}"></td>
+      </tr>`).join('');
+  }
+  form.elements['arrivalDate'].addEventListener('change', renderDaysFromRange);
+  form.elements['departDate'].addEventListener('change', renderDaysFromRange);
 
   function collectDays(){
     const rows=[]; tbody.querySelectorAll('tr').forEach(tr=>{
@@ -187,6 +199,44 @@
     return { type, detail: other };
   }
   function n(v){ return Number(v||0); }
+
+  // セッションから自動復元
+  function restoreFromSession(){
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    try{
+      const d = JSON.parse(raw);
+      form.elements['kyokai'].value = d.kyokai || '';
+      form.elements['kisan'].value = d.kisan || '';
+      form.elements['adult'].value = (d.adult ?? '');
+      form.elements['child'].value = (d.child ?? '');
+      form.elements['infant'].value = (d.infant ?? '');
+      form.elements['arrivalDate'].value = d.arrivalDate || '';
+      form.elements['arrivalTime'].value = d.arrivalTime || '';
+      form.elements['departDate'].value = d.departDate || '';
+      form.elements['departTime'].value = d.departTime || '';
+      // 交通
+      if (d.transport?.type === '独自') form.elements['transportType'].value = '独自';
+      updateTransportUI();
+      if (d.transport?.type === '公共交通') {
+        form.elements['publicTransport'].value = d.transport.detail || '鉄道';
+      } else {
+        form.elements['privateTransport'].value = ['観光バス','マイクロバス','乗用車','他'].includes(d.transport?.detail) ? d.transport.detail : '他';
+        form.elements['privateOther'].value = (['観光バス','マイクロバス','乗用車'].includes(d.transport?.detail)) ? '' : (d.transport?.detail || '');
+      }
+      // 日別
+      renderDaysFromData(d.days||[]);
+      // 直属食券・備考
+      form.elements['ticketDate'].value = d.ticketDate || '';
+      form.elements['ticketCount'].value = (d.ticketCount ?? '');
+      form.elements['note'].value = d.note || '';
+    }catch{}
+  }
+
+  window.addEventListener('load', ()=>{
+    updateTransportUI();
+    restoreFromSession();
+  });
 
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
