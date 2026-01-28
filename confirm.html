@@ -73,14 +73,11 @@
     `;
   }
 
-  // メール/LINEに入れる“表風テキスト”
+  // メール/LINE用の“表風テキスト”
   function pad(str, len){ str=String(str); const w=len - str.length; return str + (w>0 ? ' '.repeat(w) : ''); }
   function buildDaysTableText(days){
-    // 見やすい等幅カラム（メール/LINE向けのプレーンテキスト）
     const header = `日付        朝  昼  夜  宿`;
-    const rows = days.map(d => {
-      return `${d.date}  ${pad(d.breakfast,2)}  ${pad(d.lunch,2)}  ${pad(d.dinner,2)}  ${pad(d.stay,2)}`;
-    });
+    const rows = days.map(d => `${d.date}  ${pad(d.breakfast,2)}  ${pad(d.lunch,2)}  ${pad(d.dinner,2)}  ${pad(d.stay,2)}`);
     return [header, ...rows].join('\n');
   }
   function buildText(d){
@@ -111,10 +108,10 @@
     localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0,200)));
   }
 
-  // 画面に反映
+  // 画面に表示
   document.getElementById('preview').innerHTML = buildPreview(data);
 
-  // メール送信（端末のメールアプリでプレーンテキスト送付）
+  // メール送信（端末のメールアプリ）
   document.getElementById('sendMail').addEventListener('click', ()=>{
     const subject = `【帰参届】${data.kyokai}／${data.kisan}（${data.arrivalDate} 到着）`;
     const body = buildText(data);
