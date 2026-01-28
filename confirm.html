@@ -22,10 +22,8 @@
   <div class="row-actions">
     <button id="shareImage">画像で送る（スクショ）</button>
     <button id="saveImage">画像を保存</button>
-    <button id="sendMail">メールで送信（テキスト）</button>
-    <button id="sendLine">LINEで送る（テキスト）</button>
+    <button id="backEdit">編集に戻る</button>
   </div>
-  <div class="small"><a href="./index.html">入力に戻る</a></div>
   <!-- スクショ用ライブラリ（CDN） -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
@@ -78,37 +76,6 @@
   }
   preview.innerHTML = buildPreview(data);
 
-  // メール/LINEの“見やすいテキスト”（従来どおりの送信方法も維持）
-  function pad(str,len){str=String(str);const w=len-str.length;return str+(w>0?' '.repeat(w):'');}
-  function buildDaysTableText(days){
-    const header = `日付(曜)  | 朝 | 昼 | 夕 | 宿`;
-    const bar =     `-----------+----+----+----+----`;
-    const rows = (days||[]).map(d=>`${pad(fmtMDw(d.date),8)} | ${pad(d.breakfast||0,2)} | ${pad(d.lunch||0,2)} | ${pad(d.dinner||0,2)} | ${pad(d.stay||0,2)}`);
-    const bullets = (days||[]).map(d=>`- ${fmtMDw(d.date)}: 朝${d.breakfast||0} 昼${d.lunch||0} 夕${d.dinner||0} 宿${d.stay||0}`);
-    return [header, bar, ...rows, '', ...bullets].join('\n');
-  }
-  function buildText(d){
-    const total=(d.adult||0)+(d.child||0)+(d.infant||0);
-    return [
-      '【帰参届】',
-      `教会名（団体名）: ${d.kyokai}`,
-      `帰参者名: ${d.kisan}`,
-      `人数: 大人${d.adult||0} 子供${d.child||0} 乳児${d.infant||0}（計${total}）`,
-      `詰所到着: ${fmtMDw(d.arrivalDate)} ${d.arrivalTime}`,
-      `出発: ${fmtMDw(d.departDate)} ${d.departTime}`,
-      `交通: ${d.transport.type}（${d.transport.detail}）`,
-      `直属食券: ${fmtMD(d.ticketDate)||''} ／ 食数 ${d.ticketCount||0}`,
-      `備考: ${d.note||''}`,
-      '',
-      '=== 日別 内訳 ===',
-      buildDaysTableText(d.days),
-      '',
-      '※直属食券が発行される日、申込〆切日をよくご確認ください。',
-      '◎変更や取消は到着2日前迄に必ずご連絡下さい。',
-      `送信: ${new Date().toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}`
-    ].join('\n');
-  }
-
   // 画像化して共有（スクショ）
   async function captureBlob(){
     const el = document.getElementById('cap');
@@ -122,11 +89,9 @@
       const file = new File([blob], `kisantodoke_${Date.now()}.png`, { type:'image/png' });
       const subject = `【帰参届】${data.kyokai}／${data.kisan}（${fmtMD(data.arrivalDate)} 到着）`;
 
-      // Web Share API Level 2（対応端末なら画像を直接メール/LINEに添付）
       if (navigator.canShare && navigator.canShare({ files:[file] })) {
         await navigator.share({ files:[file], title: subject, text: '帰参届（画像）' });
       } else {
-        // 画像を保存して手動共有
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = file.name;
@@ -137,7 +102,6 @@
     }catch(e){ alert('画像の作成に失敗しました: ' + e.message); }
   });
 
-  // 画像だけ保存
   document.getElementById('saveImage').addEventListener('click', async ()=>{
     try{
       const blob = await captureBlob();
@@ -149,15 +113,9 @@
     }catch(e){ alert('保存に失敗しました: ' + e.message); }
   });
 
-  // テキストでメール/LINE（従来）
-  document.getElementById('sendMail').addEventListener('click', ()=>{
-    const subject = `【帰参届】${data.kyokai}／${data.kisan}（${fmtMD(data.arrivalDate)} 到着）`;
-    const body = buildText(data);
-    location.href = `mailto:${encodeURIComponent(TO_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  });
-  document.getElementById('sendLine').addEventListener('click', ()=>{
-    const text = buildText(data);
-    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`,'_blank');
+  // 編集に戻る（sessionStorageは保持したまま）
+  document.getElementById('backEdit').addEventListener('click', ()=>{
+    location.href = './index.html';
   });
 </script>
 </body>
