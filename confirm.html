@@ -11,7 +11,6 @@
   table{width:100%; border-collapse:collapse; margin-top:8px; font-size:16px;}
   th,td{border:1px solid #bbb; padding:8px; text-align:left;}
   .row-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; justify-content:center;}
-  .small{color:#666; font-size:.9rem; text-align:center; margin-top:6px;}
 </style>
 </head>
 <body>
@@ -76,28 +75,35 @@
   }
   preview.innerHTML = buildPreview(data);
 
-  // 画像化（以前の設定：scale=2、スタイル変更なし）
+  // 画像化（scale=2のまま）
   async function captureBlob(){
     const canvas = await html2canvas(cap, { scale:2, backgroundColor:'#fff' });
     return await new Promise(res => canvas.toBlob(b => res(b), 'image/png'));
   }
 
   document.getElementById('shareImage').addEventListener('click', async ()=>{
+    // 先に空タブを開いておく（ポップアップブロック対策）
+    const tmpTab = window.open('', '_blank');
+
     try{
       const blob = await captureBlob();
       const file = new File([blob], `kisantodoke_${Date.now()}.png`, { type:'image/png' });
 
+      // 共有シート対応端末ならそのまま共有
       if (navigator.canShare && navigator.canShare({ files:[file] })) {
+        if (tmpTab) tmpTab.close();
         await navigator.share({ files:[file], title: '帰参届', text: '帰参届（画像）' });
       } else {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = file.name;
-        a.click();
-        URL.revokeObjectURL(a.href);
-        alert('画像を保存しました。メール/LINEで画像を添付して送ってください。');
+        // 非対応端末: 画像を新しいタブに表示（そこから共有/保存が簡単）
+        const url = URL.createObjectURL(blob);
+        if (tmpTab) tmpTab.location.href = url; else window.open(url, '_blank');
+        setTimeout(()=>URL.revokeObjectURL(url), 60000);
+        alert('画像を新しいタブに開きました。画面右上のメニューから「共有」または「ダウンロード」を選んで送ってください。');
       }
-    }catch(e){ alert('画像の作成に失敗しました: ' + e.message); }
+    }catch(e){
+      if (tmpTab) tmpTab.close();
+      alert('画像の作成に失敗しました: ' + e.message);
+    }
   });
 
   document.getElementById('backEdit').addEventListener('click', ()=>{
