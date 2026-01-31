@@ -14,17 +14,24 @@
   .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
   .box{border:1px solid #ddd; padding:12px; border-radius:6px; margin-top:8px;}
   table{width:100%; border-collapse:collapse; margin-top:8px;}
-  th,td{border:1px solid #ddd; padding:6px; text-align:left;}
+  th,td{border:1px solid #ddd; padding:10px; text-align:left;}
   .row-actions{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; justify-content:center;}
   .small{font-size:.9rem; color:#666;}
   .muted{color:#666;}
   .radio{display:flex; gap:16px; margin:6px 0;}
   .radio label{font-weight:400;}
+/* スマホの大きな文字設定でも入力が見切れないように */
+#daysTable input[type=number]{width:100%; min-width:0; font-size:18px;}
+#daysTable input[type=date]{width:100%; min-width:0; font-size:14px;}
+@media (max-width:480px){
+table{font-size:15px;}
+th,td{padding:8px;}
+}
 </style>
 </head>
 <body>
   <h1>帰参届</h1>
-  <form id="form" autocomplete="off">
+  <form id="form" autocomplete="off" novalidate>
     <label>教会名（団体名）</label>
     <input type="text" name="kyokai" required>
 コードをコピーする<label>帰参者名（代表）</label>
@@ -120,7 +127,7 @@
 
 <div class="box">
   <strong>備考</strong>
-  <textarea name="note" placeholder="自由入力"></textarea>
+  <textarea name="note" placeholder="女性部屋希望などありましたら、こちらにご記入ください"></textarea>
 </div>
 
 <div class="row-actions">
@@ -137,8 +144,7 @@
   function updatePrivateExtras(){
     const type = form.elements['transportType'].value;
     const detail = form.elements['privateTransport'].value;
-    const showCar = (type==='独自' && detail==='乗用車');
-    carCountWrap.style.display = showCar ? 'grid' : 'none';
+    carCountWrap.style.display = (type==='独自' && detail==='乗用車') ? 'grid' : 'none';
   }
   function updateTransportUI(){
     const t = form.elements['transportType'].value;
@@ -247,11 +253,14 @@
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
 
-    // 乗用車のとき台数チェック（空はNG）
+    // 乗用車のとき台数チェック
     if (form.elements['transportType'].value==='独自' && form.elements['privateTransport'].value==='乗用車') {
       const c = form.elements['carCount'].value.trim();
       if (!c) { alert('乗用車の台数を入力してください'); return; }
     }
+
+    // 日別が空なら自動生成してから送る（復帰直後の対策）
+    if (tbody.children.length===0) renderDaysFromRange();
 
     const data = {
       kyokai: form.elements['kyokai'].value.trim(),
@@ -271,10 +280,12 @@
       note: form.elements['note'].value || '',
       now: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
     };
+
     if (!data.kyokai || !data.kisan || !data.arrivalDate || !data.arrivalTime || !data.departDate || !data.departTime){
       alert('未入力の必須項目があります'); return;
     }
     if (data.days.length===0){ alert('到着日と出発日を入れてください（期間が自動表示されます）'); return; }
+
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
     location.href = './confirm.html';
   });
