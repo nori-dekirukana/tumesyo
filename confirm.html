@@ -11,6 +11,12 @@
   table{width:100%; border-collapse:collapse; margin-top:8px; font-size:16px;}
   th,td{border:1px solid #bbb; padding:8px; text-align:left;}
   .row-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; justify-content:center;}
+  /* オーバーレイ（最終手段） */
+  #overlay{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:9999;}
+  #overlay .box{background:#fff; padding:10px; max-width:96vw; max-height:92vh; border-radius:8px;}
+  #overlay img{max-width:100%; height:auto; display:block;}
+  #overlay .msg{font-size:.95rem; color:#333; margin-top:6px;}
+  #overlay .close{margin-top:8px; width:100%;}
 </style>
 </head>
 <body>
@@ -21,6 +27,14 @@
   <div class="row-actions">
     <button id="shareImage">画像で送る（スクショ）</button>
     <button id="backEdit">編集に戻る</button>
+  </div>
+  <!-- 画像オーバーレイ -->
+  <div id="overlay">
+    <div class="box">
+      <img id="shotImg" alt="帰参届の画像">
+      <div class="msg">画像を長押しして「共有」または「写真に保存」を選んでください。</div>
+      <button class="close" id="closeOverlay">閉じる</button>
+    </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
@@ -64,46 +78,61 @@
         <tr><th>詰所到着</th><td>${esc(fmtMDw(d.arrivalDate))} ${esc(d.arrivalTime)}</td></tr>
         <tr><th>出発</th><td>${esc(fmtMDw(d.departDate))} ${esc(d.departTime)}</td></tr>
         <tr><th>交通</th><td>${transportRow}</td></tr>
-        <tr><th>直属食券 申込</th><td>${esc(fmtMD(d.ticketDate)||'')} ／ 食数 ${d.ticketCount||0}</td></tr>
-        <tr><th>備考</th><td>${esc(d.note||'')}</td></tr>
       </table>
       <h3>日別 内訳</h3>
       ${buildDaysTableHTML(d.days)}
+      <div style="margin-top:8px;">直属食券 申込：${esc(fmtMD(d.ticketDate)||'')} ／ 食数 ${d.ticketCount||0}</div>
       <div style="margin-top:8px;">※直属食券が発行される日、申込〆切日をよくご確認ください。</div>
+      <div style="margin-top:8px;"><strong>備考：</strong>${esc(d.note||'')}</div>
       <div style="margin-top:8px; font-weight:700;">◎変更や取消は到着2日前迄に必ずご連絡下さい。</div>
     `;
   }
   preview.innerHTML = buildPreview(data);
 
-  // 画像化（scale=2のまま）
+  // 画像化（scale=2）
   async function captureBlob(){
     const canvas = await html2canvas(cap, { scale:2, backgroundColor:'#fff' });
     return await new Promise(res => canvas.toBlob(b => res(b), 'image/png'));
   }
 
   document.getElementById('shareImage').addEventListener('click', async ()=>{
-    // 先に空タブを開いておく（ポップアップブロック対策）
+    // 先に空タブを開いておく（ブロック対策）
     const tmpTab = window.open('', '_blank');
-
     try{
       const blob = await captureBlob();
       const file = new File([blob], `kisantodoke_${Date.now()}.png`, { type:'image/png' });
 
-      // 共有シート対応端末ならそのまま共有
       if (navigator.canShare && navigator.canShare({ files:[file] })) {
         if (tmpTab) tmpTab.close();
         await navigator.share({ files:[file], title: '帰参届', text: '帰参届（画像）' });
       } else {
-        // 非対応端末: 画像を新しいタブに表示（そこから共有/保存が簡単）
         const url = URL.createObjectURL(blob);
-        if (tmpTab) tmpTab.location.href = url; else window.open(url, '_blank');
+        // まずは新しいタブで表示
+        if (tmpTab) { tmpTab.location.href = url; }
+        else { window.open(url, '_blank'); }
+
+        // iOS等で新しいタブが真っ白な場合の最終手段：ページ内オーバーレイで表示
+        setTimeout(()=>{
+          try{
+            const overlay = document.getElementById('overlay');
+            const img = document.getElementById('shotImg');
+            img.src = url;
+            overlay.style.display = 'flex';
+          }catch(_){}
+        }, 300);
+
+        // 後始末
         setTimeout(()=>URL.revokeObjectURL(url), 60000);
-        alert('画像を新しいタブに開きました。画面右上のメニューから「共有」または「ダウンロード」を選んで送ってください。');
       }
     }catch(e){
       if (tmpTab) tmpTab.close();
-      alert('画像の作成に失敗しました: ' + e.message);
+      alert('画像の作成または共有に失敗しました: ' + e.message);
     }
+  });
+
+  document.getElementById('closeOverlay').addEventListener('click', ()=>{
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('shotImg').src = '';
   });
 
   document.getElementById('backEdit').addEventListener('click', ()=>{
